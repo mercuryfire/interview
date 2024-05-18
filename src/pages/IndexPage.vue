@@ -2,9 +2,22 @@
   <q-page class="row q-pt-xl">
     <div class="full-width q-px-xl">
       <div class="q-mb-xl">
-        <q-input v-model="tempData.name" label="姓名" />
-        <q-input v-model="tempData.age" label="年齡" />
-        <q-btn color="primary" class="q-mt-md">新增</q-btn>
+        <q-input
+          v-model="tempData.name"
+          label="姓名"
+          :rules="[(val) => !!val || '姓名不得空白']"
+          lazy-rules
+        />
+        <q-input
+          v-model="tempData.age"
+          label="年齡"
+          :rules="[
+            (val) => !!val || '年齡不得空白',
+            (val) => /^\d+$/.test(val) || '年齡必須是正整數',
+          ]"
+          lazy-rules
+        />
+        <q-btn color="primary" class="q-mt-md" @click="addData">新增</q-btn>
       </div>
 
       <q-table
@@ -73,6 +86,52 @@
           </div>
         </template>
       </q-table>
+
+      <q-dialog v-model="isDialogOpen">
+        <q-card>
+          <q-card-section>
+            <div class="text-h6">編輯資料</div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-form @submit.prevent="saveEdit" ref="editFormRef">
+              <q-input
+                v-model="editData.name"
+                label="姓名"
+                :rules="[(val) => !!val || '姓名不得空白']"
+                lazy-rules
+              />
+              <q-input
+                v-model="editData.age"
+                label="年齡"
+                :rules="[
+                  (val) => !!val || '年齡不得空白',
+                  (val) => /^\d+$/.test(val) || '年齡必須是正整數',
+                ]"
+                lazy-rules
+              />
+              <q-card-actions align="right">
+                <q-btn flat label="取消" v-close-popup />
+                <q-btn type="submit" flat label="保存" />
+              </q-card-actions>
+            </q-form>
+          </q-card-section>
+        </q-card>
+      </q-dialog>
+      <q-dialog v-model="isDeleteDialogOpen">
+        <q-card>
+          <q-card-section>
+            <div class="text-h6">提示</div>
+          </q-card-section>
+
+          <q-card-section> 是否確定刪除該筆資料？ </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="取消" v-close-popup />
+            <q-btn flat label="刪除" color="red" @click="confirmDelete" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -80,7 +139,7 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { QTableProps } from 'quasar';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 interface btnType {
   label: string;
   icon: string;
@@ -123,9 +182,105 @@ const tempData = ref({
   name: '',
   age: '',
 });
-function handleClickOption(btn, data) {
-  // ...
-}
+
+const editData = ref<{ id: number; name: string; age: number }>({
+  id: 0,
+  name: '',
+  age: 0,
+});
+const isDialogOpen = ref(false);
+const isDeleteDialogOpen = ref(false);
+const itemToDelete = ref<{ id: number; name: string; age: number } | null>(
+  null
+);
+const formRef = ref();
+const editFormRef = ref();
+const handleClickOption = (btn, data) => {
+  if (btn.status === 'delete') {
+    // axios
+    //   .delete(`https://dahua.metcfire.com.tw/api/CRUDTest/${data.id}`)
+    //   .then((response) => {
+    //     blockData.value = blockData.value.filter((item) => item.id !== data.id);
+    //   })
+    //   .catch((error) => {
+    //     console.error('Error deleting data:', error);
+    //   });
+
+    itemToDelete.value = data;
+    isDeleteDialogOpen.value = true;
+  } else if (btn.status === 'edit') {
+    editData.value = { ...data };
+    isDialogOpen.value = true;
+  }
+};
+
+const confirmDelete = () => {
+  axios
+    .delete(
+      `https://dahua.metcfire.com.tw/api/CRUDTest/${itemToDelete.value.id}`
+    )
+    .then((response) => {
+      blockData.value = blockData.value.filter(
+        (item) => item.id !== itemToDelete.value.id
+      );
+      isDeleteDialogOpen.value = false;
+      itemToDelete.value = null;
+    })
+    .catch((error) => {
+      console.error('Error deleting data:', error);
+    });
+};
+
+const fetchData = () => {
+  axios
+    .get('https://dahua.metcfire.com.tw/api/CRUDTest/a')
+    .then((response) => {
+      blockData.value = response.data;
+    })
+    .catch((error) => {
+      console.error('Error fetching data:', error);
+    });
+};
+
+const addData = () => {
+  if (editFormRef.value && editFormRef.value.validate()) {
+    axios
+      .post('https://dahua.metcfire.com.tw/api/CRUDTest', tempData.value, {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      .then((response) => {
+        console.log(response);
+      })
+      .catch((error) => {
+        console.error('Error adding data:', error);
+      });
+  }
+};
+
+const saveEdit = () => {
+  if (editFormRef.value && editFormRef.value.validate()) {
+    axios
+      .patch('https://dahua.metcfire.com.tw/api/CRUDTest', editData.value, {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      .then((response) => {
+        const index = blockData.value.findIndex(
+          (item) => item.id === editData.value.id
+        );
+        if (index !== -1) {
+          blockData.value[index] = { ...editData.value };
+        }
+        isDialogOpen.value = false;
+      })
+      .catch((error) => {
+        console.error('Error saving edit:', error);
+      });
+  }
+};
+
+onMounted(() => {
+  fetchData();
+});
 </script>
 
 <style lang="scss" scoped>
