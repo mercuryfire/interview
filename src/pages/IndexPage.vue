@@ -4,7 +4,11 @@
       <div class="q-mb-xl">
         <q-input v-model="tempData.name" label="姓名" />
         <q-input v-model="tempData.age" label="年齡" />
-        <q-btn color="primary" class="q-mt-md">新增</q-btn>
+        <q-btn
+          color="primary"
+          class="q-mt-md"
+          @click="handleCreateBtn(tempData)"
+        >新增</q-btn>
       </div>
 
       <q-table
@@ -86,6 +90,10 @@ interface btnType {
   icon: string;
   status: string;
 }
+interface Data {
+  name: string;
+  age: string;
+}
 const blockData = ref([
   {
     name: 'test',
@@ -123,6 +131,33 @@ const tempData = ref({
   name: '',
   age: '',
 });
+
+async function handleCreateBtn(data: Data) {
+  try {
+    const res = await axios.post('https://dahua.metcfire.com.tw/api/CRUDTest', {
+      name: data.name,
+      age: data.age,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (res.status === 200) {
+      // Clear input
+      tempData.value = {
+        name: '',
+        age: '',
+      };
+      console.log('新增成功');
+    } else {
+      console.log('新增失敗');
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function handleClickOption(btn, data) {
   // ...
 }
