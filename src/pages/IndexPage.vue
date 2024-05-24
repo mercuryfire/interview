@@ -83,14 +83,22 @@
 
 <script setup lang="ts">
 import axios from 'axios';
-import { QTableProps } from 'quasar';
+import { QTableProps, useQuasar } from 'quasar';
 import { ref, onMounted } from 'vue';
+
+const $q = useQuasar();
+
 interface btnType {
   label: string;
   icon: string;
   status: string;
 }
-interface Data {
+interface dataType {
+  name: string;
+  age: string;
+}
+interface rowDataType {
+  id: string;
   name: string;
   age: string;
 }
@@ -132,7 +140,7 @@ const tempData = ref({
   age: '',
 });
 
-async function handleCreateBtn(data: Data) {
+async function handleCreateBtn(data: dataType) {
   try {
     const res = await axios.post('https://dahua.metcfire.com.tw/api/CRUDTest', {
       name: data.name,
@@ -162,6 +170,23 @@ async function handleCreateBtn(data: Data) {
   }
 }
 
+async function deleteData(id: string) {
+  try {
+    const res = await axios.delete(`https://dahua.metcfire.com.tw/api/CRUDTest/${id}`);
+    if (res.status === 200) {
+      console.log('刪除成功');
+    } else {
+      console.log(res)
+      console.log('刪除失敗');
+    }
+
+    // Refresh table data
+    getTableData();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 async function getTableData() {
   try {
     const res = await axios.get('https://dahua.metcfire.com.tw/api/CRUDTest/a');
@@ -175,8 +200,26 @@ async function getTableData() {
   }
 }
 
-function handleClickOption(btn, data) {
-  // ...
+function handleClickOption(btn: btnType, rowData: rowDataType) {
+  if (btn.status === 'edit') {
+  } else if (btn.status === 'delete') {
+    $q.dialog({
+      title: '提示',
+      message: '是否確定刪除該筆資料?',
+      ok: {
+        label: '確定',
+        flat: true,
+        color: 'brown'
+      },
+      cancel: {
+        label: '取消',
+        flat: true,
+        color: 'brown'
+      },
+    }).onOk(async () => {
+      await deleteData(rowData.id);
+    })
+  }
 }
 
 onMounted(() => {
