@@ -84,7 +84,7 @@
 <script setup lang="ts">
 import axios from 'axios';
 import { QTableProps } from 'quasar';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 interface btnType {
   label: string;
   icon: string;
@@ -149,6 +149,10 @@ async function handleCreateBtn(data: Data) {
         name: '',
         age: '',
       };
+
+      // Refresh table data
+      getTableData();
+
       console.log('新增成功');
     } else {
       console.log('新增失敗');
@@ -158,9 +162,26 @@ async function handleCreateBtn(data: Data) {
   }
 }
 
+async function getTableData() {
+  try {
+    const res = await axios.get('https://dahua.metcfire.com.tw/api/CRUDTest/a');
+    if (res.status === 200) {
+      blockData.value = res.data;
+    } else {
+      console.log('取得資料失敗');
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function handleClickOption(btn, data) {
   // ...
 }
+
+onMounted(() => {
+  getTableData();
+});
 </script>
 
 <style lang="scss" scoped>
